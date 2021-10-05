@@ -18,7 +18,8 @@ const (
 
 var (
 	r = chi.NewRouter()
-	url = "api.openweathermap.org/data/2.5/weather?q=London&appid=" + api
+	city = "Budapest" //default city
+	url = "https://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + api
 )
 
 type Health struct {
@@ -80,7 +81,7 @@ type weatherImporant struct{
 
 func checkHealth(w http.ResponseWriter, r *http.Request){
 	healthStatus := Health{Health: "healthy"}
-	resp, err := http.Get("https://" + url)
+	resp, err := http.Get(url)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -89,14 +90,16 @@ func checkHealth(w http.ResponseWriter, r *http.Request){
 
 	defer resp.Body.Close()
 
+	//if status code 200 is received the server health is OK
 	if resp.StatusCode == 200 {
-		fmt.Println("checkhealth endpoint hit")
 		json.NewEncoder(w).Encode(healthStatus)
 	}
 }
 
 func fetchWeather(w http.ResponseWriter, r *http.Request){
-	resp, err  := http.Get("https://" + url)
+	queriedCity := r.URL.Query().Get("city")
+	url = "https://api.openweathermap.org/data/2.5/weather?q=" + queriedCity + "&appid=" + api
+	resp, err  := http.Get(url)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
