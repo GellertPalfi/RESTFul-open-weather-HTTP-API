@@ -3,13 +3,14 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	//"github.com/go-chi/chi/v5/middleware"
 )
 
 const (
@@ -88,11 +89,19 @@ func checkHealth(w http.ResponseWriter, r *http.Request){
 		return
 	}
 
-	defer resp.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			
+		}
+	}(resp.Body)
 
 	//if status code 200 is received the server health is OK
 	if resp.StatusCode == 200 {
-		json.NewEncoder(w).Encode(healthStatus)
+		err := json.NewEncoder(w).Encode(healthStatus)
+		if err != nil {
+			return 
+		}
 	}
 }
 
@@ -108,7 +117,11 @@ func fetchWeather(w http.ResponseWriter, r *http.Request){
 
 	body, err := ioutil.ReadAll(resp.Body)
 	var weather weatherAll
-	json.Unmarshal(body, &weather)
+
+	err = json.Unmarshal(body, &weather)
+	if err != nil {
+		return 
+	}
 
 	weatherImp := weatherImporant{
 		//2 digit flote precision, converting to celsius sometimes resulted in a lot of trailing zeros
@@ -119,8 +132,30 @@ func fetchWeather(w http.ResponseWriter, r *http.Request){
 		Pressure: weather.Main.Pressure,
 		Humidity: weather.Main.Humidity,
 	}
-	json.NewEncoder(w).Encode(weatherImp)
+	err = json.NewEncoder(w).Encode(weatherImp)
+	if err != nil {
+		return 
+	}
+}
 
+func htmlQuery(w http.ResponseWriter, r *http.Request){
+	var weather weatherAll //placeholder
+	url = "https://api.openweathermap.org/data/2.5/weather?q=Budapest&appid=" + api
+	htmlFile := `
+		<body>
+			<form id="form"> 
+  				<input type="search" id="query" name="q" placeholder="Search...">
+  				<button>Search</button>
+			</form>
+		</body>`
+
+	templ, err:=template.New("index").Parse(htmlFile)
+	if err != nil {
+		return
+	}
+	if err := templ.Execute(w, weather); err != nil {
+		return
+	}
 }
 
 //convert time to the needed format and only keep relevant information
@@ -132,6 +167,7 @@ func convertTime(timeToConvert int64) string{
 func handleRequests(){
 	port := ":3000"
 
+	r.HandleFunc("/searchcity", htmlQuery)
 	r.HandleFunc("/api/health", checkHealth)
 	r.HandleFunc("/api/weather", fetchWeather)
 	fmt.Println("Server is up and running on port " + port)
