@@ -18,9 +18,9 @@ const (
 )
 
 var (
-	r = chi.NewRouter()
-	city = "Budapest" //default city
-	url = "https://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + api
+	r           = chi.NewRouter()
+	defaultCity = "Budapest"
+	url         = "https://api.openweathermap.org/data/2.5/weather?q=" + defaultCity + "&appid=" + api
 )
 
 type Health struct {
@@ -107,6 +107,10 @@ func checkHealth(w http.ResponseWriter, r *http.Request){
 
 func fetchWeather(w http.ResponseWriter, r *http.Request){
 	queriedCity := r.URL.Query().Get("city")
+	//setting to defaultCity when query is empty
+	if len(queriedCity) == 0 {
+		queriedCity = defaultCity
+	}
 	url = "https://api.openweathermap.org/data/2.5/weather?q=" + queriedCity + "&appid=" + api
 	resp, err  := http.Get(url)
 
